@@ -1,5 +1,5 @@
 EESchema Schematic File Version 4
-LIBS:ESP_Single_A-cache
+LIBS:weeSpindel-cache
 EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
@@ -102,7 +102,7 @@ Wire Wire Line
 Wire Wire Line
 	2300 6950 2300 7000
 Wire Wire Line
-	900  7000 2300 7000
+	900  7000 1300 7000
 Connection ~ 2300 7000
 Wire Wire Line
 	2300 7000 2300 7200
@@ -135,7 +135,7 @@ F 3 "http://wiki.ai-thinker.com/_media/esp8266/docs/aithinker_esp_12f_datasheet_
 	1    0    0    -1  
 $EndComp
 Text GLabel 1300 6250 0    50   Input ~ 0
-GPIO12
+DQ
 Wire Wire Line
 	6950 2500 7150 2500
 Text Notes 6100 2350 0    50   ~ 0
@@ -427,7 +427,7 @@ F 3 "http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf" H 5750 5400 50  00
 	1    0    0    -1  
 $EndComp
 Text GLabel 6450 5150 2    50   Input ~ 0
-GPIO12
+DQ
 $Comp
 L power:GND #PWR05
 U 1 1 5E7C7E1D
@@ -584,5 +584,22 @@ Wire Wire Line
 	2050 1700 3300 1700
 Wire Wire Line
 	1300 6250 1400 6250
-NoConn ~ 1400 6350
+Wire Wire Line
+	1300 6350 1400 6350
+$Comp
+L Device:Jumper JP1
+U 1 1 5E859075
+P 1300 6650
+F 0 "JP1" V 1346 6562 50  0000 R CNN
+F 1 "Cal" V 1255 6562 50  0000 R CNN
+F 2 "CPB:Socket_Strip_Straight_1x02_Oval_Pitch2.54mm" H 1300 6650 50  0001 C CNN
+F 3 "~" H 1300 6650 50  0001 C CNN
+	1    1300 6650
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	1300 6950 1300 7000
+Connection ~ 1300 7000
+Wire Wire Line
+	1300 7000 2300 7000
 $EndSCHEMATC
