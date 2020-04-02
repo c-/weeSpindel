@@ -101,8 +101,6 @@ Wire Wire Line
 	3200 6350 3350 6350
 Wire Wire Line
 	2300 6950 2300 7000
-Wire Wire Line
-	900  7000 1300 7000
 Connection ~ 2300 7000
 Wire Wire Line
 	2300 7000 2300 7200
@@ -253,7 +251,7 @@ Wire Wire Line
 Wire Wire Line
 	1650 2100 1700 2100
 Connection ~ 1650 2100
-Text GLabel 2200 800  0    50   Input ~ 0
+Text GLabel 1950 1050 2    50   Output ~ 0
 VBAT
 Text GLabel 1050 2100 0    50   Input ~ 0
 VBAT
@@ -357,17 +355,6 @@ Wire Wire Line
 	2000 2100 2100 2100
 Wire Wire Line
 	1650 3050 2600 3050
-$Comp
-L Connector_Generic:Conn_01x02 J1
-U 1 1 5D26FFDF
-P 2600 900
-F 0 "J1" H 2680 892 50  0000 L CNN
-F 1 "POWER" H 2680 801 50  0000 L CNN
-F 2 "CPB:Socket_Strip_Straight_1x02_Oval_Pitch2.54mm" H 2600 900 50  0001 C CNN
-F 3 "~" H 2600 900 50  0001 C CNN
-	1    2600 900 
-	1    0    0    1   
-$EndComp
 Wire Wire Line
 	3700 2400 3700 2100
 Wire Wire Line
@@ -395,12 +382,12 @@ Wire Wire Line
 $Comp
 L power:GND #PWR01
 U 1 1 5DBBA683
-P 2050 900
-F 0 "#PWR01" H 2050 650 50  0001 C CNN
-F 1 "GND" H 2055 727 50  0000 C CNN
-F 2 "" H 2050 900 50  0001 C CNN
-F 3 "" H 2050 900 50  0001 C CNN
-	1    2050 900 
+P 900 1300
+F 0 "#PWR01" H 900 1050 50  0001 C CNN
+F 1 "GND" H 905 1127 50  0000 C CNN
+F 2 "" H 900 1300 50  0001 C CNN
+F 3 "" H 900 1300 50  0001 C CNN
+	1    900  1300
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
@@ -411,7 +398,6 @@ Text GLabel 3350 6150 2    50   Input ~ 0
 GPIO0
 Wire Wire Line
 	3200 6150 3350 6150
-NoConn ~ 1400 6150
 NoConn ~ 3200 5750
 NoConn ~ 3200 5850
 NoConn ~ 3200 6250
@@ -474,10 +460,6 @@ Wire Wire Line
 	1650 2100 1650 2700
 Wire Wire Line
 	8300 1400 8300 3350
-Wire Wire Line
-	2200 800  2400 800 
-Wire Wire Line
-	2400 900  2050 900 
 Wire Wire Line
 	4100 2100 4400 2100
 Wire Wire Line
@@ -584,22 +566,57 @@ Wire Wire Line
 	2050 1700 3300 1700
 Wire Wire Line
 	1300 6250 1400 6250
-Wire Wire Line
-	1300 6350 1400 6350
 $Comp
 L Device:Jumper JP1
 U 1 1 5E859075
-P 1300 6650
-F 0 "JP1" V 1346 6562 50  0000 R CNN
-F 1 "Cal" V 1255 6562 50  0000 R CNN
-F 2 "CPB:Socket_Strip_Straight_1x02_Oval_Pitch2.54mm" H 1300 6650 50  0001 C CNN
-F 3 "~" H 1300 6650 50  0001 C CNN
-	1    1300 6650
+P 1050 6600
+F 0 "JP1" V 1096 6512 50  0000 R CNN
+F 1 "Cal" V 1005 6512 50  0000 R CNN
+F 2 "CPB:Socket_Strip_Straight_1x02_Oval_Pitch2.54mm" H 1050 6600 50  0001 C CNN
+F 3 "~" H 1050 6600 50  0001 C CNN
+	1    1050 6600
 	0    -1   -1   0   
 $EndComp
+$Comp
+L Device:Battery_Cell BT1
+U 1 1 5E862E9B
+P 1050 1050
+F 0 "BT1" V 795 1100 50  0000 C CNN
+F 1 "AA" V 886 1100 50  0000 C CNN
+F 2 "CPB:Battery_Springs_AA" V 1050 1110 50  0001 C CNN
+F 3 "~" V 1050 1110 50  0001 C CNN
+	1    1050 1050
+	0    1    1    0   
+$EndComp
 Wire Wire Line
-	1300 6950 1300 7000
-Connection ~ 1300 7000
+	1250 1050 1400 1050
 Wire Wire Line
-	1300 7000 2300 7000
+	950  1050 900  1050
+Wire Wire Line
+	900  1050 900  1300
+$Comp
+L Switch:SW_SPST SW1
+U 1 1 5E86C4A2
+P 1600 1050
+F 0 "SW1" H 1600 825 50  0000 C CNN
+F 1 "POWER" H 1600 916 50  0000 C CNN
+F 2 "CPB:SPST Switch 9mmx3.5mm C223839" H 1600 1050 50  0001 C CNN
+F 3 "" H 1600 1050 50  0001 C CNN
+	1    1600 1050
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	1800 1050 1950 1050
+Wire Wire Line
+	900  7000 1050 7000
+NoConn ~ 1400 6350
+Wire Wire Line
+	1400 6150 1050 6150
+Wire Wire Line
+	1050 6150 1050 6300
+Wire Wire Line
+	1050 6900 1050 7000
+Connection ~ 1050 7000
+Wire Wire Line
+	1050 7000 2300 7000
 $EndSCHEMATC
