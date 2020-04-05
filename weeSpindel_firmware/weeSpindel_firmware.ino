@@ -56,6 +56,12 @@ static double voltage = HUGE_VAL;
 static unsigned long started = 0;
 
 static void actuallySleep(void) {
+
+  // turn off the sensors
+  pinMode(DS18B20_PIN, OUTPUT);
+  digitalWrite(DS18B20_PIN, LOW);
+  mpu.setSleepEnabled(true);
+  
   bool lowv = !(voltage != HUGE_VAL && voltage > LOW_VOLTAGE_THRESHOLD);
   
   double uptime = (millis() - started)/1000.;
@@ -97,9 +103,9 @@ static void sendSensorData() {
 
   root["tt"] = ds18.getTempCByIndex(0);
   root["tilt"] = sum / nsamples;
-  root["nsamples"] = nsamples;  // remove in final version
+  root["tt2"] = mpu.getTemperature() / 340 + 36.53;
+  // root["nsamples"] = nsamples;
   root["v"] = readVoltage();
-  root["id"] = nodeid;
 
   String jstr;
   root.printTo(jstr);
@@ -120,7 +126,7 @@ static unsigned long dsready = 0;
 
 static void startTempReading() {
   ds18.requestTemperatures();
-  dsready = millis() + (750/(1<<(12-DS18RESOLUTION)));
+  dsready = millis() + ds18.millisToWaitForConversion(DS18RESOLUTION);
 }
 static boolean isTempReady() {
   return millis() >= dsready;
