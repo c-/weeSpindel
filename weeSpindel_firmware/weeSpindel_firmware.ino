@@ -2,6 +2,10 @@
 // transmit data packets. The data is formatted as a MQTT-style JSON
 // message, with a "topic payload" structure. This allows a ESP-NOW
 // gateway to bounce it straight to a MQTT broker.
+//
+// Note: the MPU-6050 has a temperature sensor, so the
+// BS18B20 might be superfluous, except that it can be in contact with
+// the tube wall.
 
 extern "C" {
   #include <espnow.h>
@@ -14,7 +18,6 @@ extern "C" {
 
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
-
 
 #define WIFI_CHANNEL 7
 #define SEND_TIMEOUT 100
@@ -91,7 +94,7 @@ static float samples[MAX_SAMPLES];
 static void sendSensorData() {
   ledOn();
   
-  Serial.println("Sending update...");
+  Serial.println("Sending data...");
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
 
@@ -101,9 +104,9 @@ static void sendSensorData() {
     sum += samples[i]; 
   }
 
-  root["tt"] = ds18.getTempCByIndex(0);
+  root["ds18_tt"] = ds18.getTempCByIndex(0);
   root["tilt"] = sum / nsamples;
-  root["tt2"] = mpu.getTemperature() / 340 + 36.53;
+  root["mpu_tt"] = mpu.getTemperature() / 340.0 + 36.53;
   // root["nsamples"] = nsamples;
   root["v"] = readVoltage();
 
@@ -112,13 +115,11 @@ static void sendSensorData() {
 
   String msg = TOPIC_PREFIX;
   msg += nodeid;
-  msg += "/status";
   msg += " ";
   msg += jstr;
-  Serial.println(msg);
   esp_now_send(NULL, (u8*)msg.c_str(), msg.length()+1);
+  Serial.println(msg);
 
-  Serial.println("Finished update...");
   ledOff();
 }
 
