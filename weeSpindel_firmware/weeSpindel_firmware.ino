@@ -3,17 +3,15 @@
 // message, with a "topic payload" structure. This allows a ESP-NOW
 // gateway to bounce it straight to a MQTT broker.
 //
-// Note: the MPU-6050 has a temperature sensor, so the
-// BS18B20 might be superfluous, except that it can be in contact with
-// the tube wall.
+// Note that this drop the DS18B20. The MPU sensor seems like it's in the
+// same ballpark (usually under .5C difference), although it is
+// a bit slower at catching temperature changes.
 
 extern "C" {
   #include <espnow.h>
 }
 #include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
 #include <Wire.h>
 
 #include "I2Cdev.h"
@@ -21,14 +19,12 @@ extern "C" {
 
 #define WIFI_CHANNEL 7
 #define SEND_TIMEOUT 100
-#define DS18B20_PIN 12
 #define SDA_PIN 4
 #define SCL_PIN 5
-#define INT_PIN 15 // not used currently
 #define CALIBRATE_PIN 14  // pull low to run in calibration mode
-#define DS18RESOLUTION 10
-#define MAX_SAMPLES 20
+#define MAX_SAMPLES 5   // number of tilt samples to average
 #define SLEEP_UPDATE_INTERVAL 600
+#define CAL_DELAY 30 * 1000  // send a reading every 30 seconds in calibration mode
 #define TOPIC_PREFIX "sensors/"
 
 // When the battery cell (default assumes NiMH) gets this low,
@@ -38,8 +34,6 @@ extern "C" {
 
 //------------------------------------------------------------
 static String nodeid;
-static OneWire oneWire(DS18B20_PIN);
-static DallasTemperature ds18(&oneWire);
 static MPU6050 mpu;
 
 //------------------------------------------------------------
@@ -60,9 +54,7 @@ static unsigned long started = 0;
 
 static void actuallySleep(void) {
 
-  // turn off the sensors
-  pinMode(DS18B20_PIN, OUTPUT);
-  digitalWrite(DS18B20_PIN, LOW);
+  // turn off the sensor
   mpu.setSleepEnabled(true);
   
   bool lowv = !(voltage != HUGE_VAL && voltage > LOW_VOLTAGE_THRESHOLD);
@@ -104,10 +96,8 @@ static void sendSensorData() {
     sum += samples[i]; 
   }
 
-  root["ds18_tt"] = ds18.getTempCByIndex(0);
   root["tilt"] = sum / nsamples;
-  root["mpu_tt"] = mpu.getTemperature() / 340.0 + 36.53;
-  // root["nsamples"] = nsamples;
+  root["tt"] = mpu.getTemperature() / 340.0 + 36.53;
   root["v"] = readVoltage();
 
   String jstr;
@@ -121,21 +111,6 @@ static void sendSensorData() {
   Serial.println(msg);
 
   ledOff();
-}
-
-static unsigned long dsready = 0;
-
-static void startTempReading() {
-  ds18.requestTemperatures();
-  dsready = millis() + ds18.millisToWaitForConversion(DS18RESOLUTION);
-}
-static boolean isTempReady() {
-  return millis() >= dsready;
-}
-
-volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
-static void dmpDataReady() {
-    mpuInterrupt = true;
 }
 
 static boolean normal_mode = false;
@@ -181,23 +156,10 @@ void setup() {
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_add_peer(broadcast_mac, ESP_NOW_ROLE_SLAVE, WIFI_CHANNEL, NULL, 0);
 
-  // kick off the temperature conversion
-  Serial.println("Starting Temperature Reading");
-  ds18.begin();
-  DeviceAddress tempDeviceAddress;
-  ds18.getAddress(tempDeviceAddress, 0);
-  ds18.setResolution(tempDeviceAddress, DS18RESOLUTION);
-  ds18.setWaitForConversion(false);
-  startTempReading();
-
   Serial.println("Starting MPU-6050 Reading");
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(400000);
   mpu.initialize();
-  //pinMode(INT_PIN, INPUT);
-  //devStatus = mpu.dmpInitialize();
-  //mpu.setDMPEnabled(true);
-  //attachInterrupt(digitalPinToInterrupt(INT_PIN), dmpDataReady, RISING);
   mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
   mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
   mpu.setDLPFMode(MPU6050_DLPF_BW_5);
@@ -220,23 +182,18 @@ static float calculateTilt(float ax, float az, float ay ) {
 }
 
 void loop() {
-  if( sent==0 && isTempReady() ) {
+  if( nsamples >= MAX_SAMPLES ) {
     sendSensorData();
     sent = millis();
 
+    // in calibration mode, just keep cycling after a delay
     if( !normal_mode ) {
-      // in calibration mode, just keep cycling
+      sent += CAL_DELAY;
       nsamples = 0;
-      startTempReading();
-      dsready += 1000;  // but less often
-      sent = 0;
     }
-  } else if( normal_mode && sent ) {
-    // FIXME: this could be reduced if we checked for ACK's
-    if (millis()-sent > SEND_TIMEOUT) {
-      actuallySleep();
-    }
-  } else if( nsamples < MAX_SAMPLES && mpu.getIntDataReadyStatus() ) {
+  } else if( normal_mode && sent && millis()-sent > SEND_TIMEOUT ) {
+    actuallySleep();
+  } else if( millis() > sent && nsamples < MAX_SAMPLES && mpu.getIntDataReadyStatus() ) {
     int16_t ax, ay, az;
     mpu.getAcceleration(&ax, &az, &ay);
     samples[nsamples++] = calculateTilt(ax, az, ay);
