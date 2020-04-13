@@ -70,8 +70,8 @@ F 3 "http://wiki.ai-thinker.com/_media/esp8266/docs/aithinker_esp_12f_datasheet_
 	1    3700 5950
 	1    0    0    -1  
 $EndComp
-Text Notes 850  5350 0    50   ~ 0
-RST: newer ESP-12F has\ninternal 12k pullup
+Text Notes 850  5450 0    50   ~ 0
+RST: newer ESP-12F has\ninternal 12k pullup. 47K\nshould allow versions\nwith and without to boot.
 $Comp
 L Device:R R5
 U 1 1 5CA494A3
@@ -88,7 +88,7 @@ L Device:C_Small C7
 U 1 1 5CC4D333
 P 2200 6800
 F 0 "C7" H 2292 6846 50  0000 L CNN
-F 1 "100nF" H 2292 6755 50  0000 L CNN
+F 1 "2.2uF" H 2292 6755 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 2200 6800 50  0001 C CNN
 F 3 "~" H 2200 6800 50  0001 C CNN
 	1    2200 6800
@@ -229,7 +229,7 @@ $EndComp
 Wire Wire Line
 	1650 3050 1650 3000
 Text Notes 3350 3450 0    50   ~ 0
-Duplicate 10uF caps\nto reduce ESD, as per\ndatasheet. Larger bulk\ncapacitor for 1xAA.
+Duplicate 10uF caps\nto reduce ESD, as per\ndatasheet. Larger bulk\ncapacitor for 1x NiMH.
 Wire Wire Line
 	2600 2550 2600 3050
 Wire Wire Line
@@ -337,23 +337,12 @@ $EndComp
 Wire Wire Line
 	2050 2250 2100 2250
 $Comp
-L Device:Jumper JP1
-U 1 1 5E859075
-P 2450 6500
-F 0 "JP1" V 2496 6412 50  0000 R CNN
-F 1 "Cal" V 2405 6412 50  0000 R CNN
-F 2 "CPB:Socket_Strip_Straight_1x02_Oval_Pitch2.54mm" H 2450 6500 50  0001 C CNN
-F 3 "~" H 2450 6500 50  0001 C CNN
-	1    2450 6500
-	0    -1   -1   0   
-$EndComp
-$Comp
 L Device:Battery_Cell BT1
 U 1 1 5E862E9B
 P 850 900
 F 0 "BT1" V 595 950 50  0000 C CNN
-F 1 "AA" V 686 950 50  0000 C CNN
-F 2 "CPB:Battery_Springs_AA" V 850 960 50  0001 C CNN
+F 1 "NiMH" V 686 950 50  0000 C CNN
+F 2 "CPB:Battery_Springs_AAA" V 850 960 50  0001 C CNN
 F 3 "~" V 850 960 50  0001 C CNN
 	1    850  900 
 	0    1    1    0   
@@ -379,10 +368,6 @@ NoConn ~ 2800 6250
 Wire Wire Line
 	2800 6050 2450 6050
 Wire Wire Line
-	2450 6050 2450 6200
-Wire Wire Line
-	2450 6800 2450 6900
-Wire Wire Line
 	2450 6900 3700 6900
 NoConn ~ 2800 6150
 $Comp
@@ -390,8 +375,8 @@ L Connector_Generic:Conn_01x04 J1
 U 1 1 5E97FF96
 P 8300 4750
 F 0 "J1" H 8380 4742 50  0000 L CNN
-F 1 "I2C" H 8380 4651 50  0000 L CNN
-F 2 "CPB:Socket_Strip_Straight_1x04_Oval_Pitch2.54mm" H 8300 4750 50  0001 C CNN
+F 1 "MPU-6050" H 8380 4651 50  0000 L CNN
+F 2 "CPB:MPU-6050 Breakout I2C" H 8300 4750 50  0001 C CNN
 F 3 "~" H 8300 4750 50  0001 C CNN
 	1    8300 4750
 	1    0    0    -1  
@@ -526,4 +511,21 @@ Wire Wire Line
 	7100 4450 8050 4450
 Wire Wire Line
 	7100 4850 8100 4850
+Wire Wire Line
+	2450 6800 2450 6900
+Wire Wire Line
+	2450 6050 2450 6200
+$Comp
+L Device:Jumper JP1
+U 1 1 5E859075
+P 2450 6500
+F 0 "JP1" V 2496 6412 50  0000 R CNN
+F 1 "Cal" V 2405 6412 50  0000 R CNN
+F 2 "CPB:Socket_Strip_Straight_1x02_Oval_Pitch2.54mm" H 2450 6500 50  0001 C CNN
+F 3 "~" H 2450 6500 50  0001 C CNN
+	1    2450 6500
+	0    -1   -1   0   
+$EndComp
+Text Notes 800  7000 0    50   ~ 0
+10K/2.2uF RC should give\na startup delay of maybe\n25ms. The boost needs extra\ntime to stabilize.
 $EndSCHEMATC

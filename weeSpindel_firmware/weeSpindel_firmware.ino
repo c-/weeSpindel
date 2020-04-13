@@ -3,7 +3,7 @@
 // message, with a "topic payload" structure. This allows a ESP-NOW
 // gateway to bounce it straight to a MQTT broker.
 //
-// Note that this drop the DS18B20. The MPU sensor seems like it's in the
+// Note that this drops the DS18B20. The MPU sensor seems like it's in the
 // same ballpark (usually under .5C difference), although it is
 // a bit slower at catching temperature changes.
 
@@ -23,8 +23,8 @@ extern "C" {
 #define SCL_PIN 5
 #define CALIBRATE_PIN 14  // pull low to run in calibration mode
 #define MAX_SAMPLES 5   // number of tilt samples to average
-#define SLEEP_UPDATE_INTERVAL 600
-#define CAL_DELAY 30 * 1000  // send a reading every 30 seconds in calibration mode
+#define NORMAL_INTERVAL 900
+#define CALIBRATION_INTERVAL 30
 #define TOPIC_PREFIX "sensors/"
 
 // When the battery cell (default assumes NiMH) gets this low,
@@ -35,6 +35,7 @@ extern "C" {
 //------------------------------------------------------------
 static String nodeid;
 static MPU6050 mpu;
+static long sleep_interval = NORMAL_INTERVAL;
 
 //------------------------------------------------------------
 static const int led = LED_BUILTIN;
@@ -52,7 +53,7 @@ static inline void ledOff() {
 static double voltage = HUGE_VAL;
 static unsigned long started = 0;
 
-static void actuallySleep(void) {
+static void actuallySleep() {
 
   // turn off the sensor
   mpu.setSleepEnabled(true);
@@ -61,9 +62,9 @@ static void actuallySleep(void) {
   
   double uptime = (millis() - started)/1000.;
   
-  long willsleep = SLEEP_UPDATE_INTERVAL * (lowv ? 3 : 1) - uptime;
-  if( willsleep <= SLEEP_UPDATE_INTERVAL/2) {
-    willsleep = SLEEP_UPDATE_INTERVAL;
+  long willsleep = sleep_interval * (lowv ? 3 : 1) - uptime;
+  if( willsleep <= sleep_interval/2) {
+    willsleep = sleep_interval;
   }
   Serial.printf("Deep sleeping %d seconds after %.2g awake\n", willsleep, uptime);
 
@@ -99,6 +100,7 @@ static void sendSensorData() {
   root["tilt"] = sum / nsamples;
   root["tt"] = mpu.getTemperature() / 340.0 + 36.53;
   root["v"] = readVoltage();
+  root["interval"] = sleep_interval;
 
   String jstr;
   root.printTo(jstr);
@@ -113,7 +115,6 @@ static void sendSensorData() {
   ledOff();
 }
 
-static boolean normal_mode = false;
 void setup() {
   started = millis();
 
@@ -138,8 +139,15 @@ void setup() {
   Serial.println("Build: " __DATE__ " " __TIME__ );
   
   pinMode(CALIBRATE_PIN,INPUT_PULLUP);
-  normal_mode = digitalRead(CALIBRATE_PIN);
-  Serial.println(normal_mode ? "Normal mode" : "Calibration mode");
+  if( digitalRead(CALIBRATE_PIN) ) {
+    Serial.println("Normal mode");
+  } else {
+    Serial.println("Calibration mode");
+
+    // The only difference between "norma" and "calibration"
+    // is the update frequency. We still deep sleep.
+    sleep_interval = CALIBRATION_INTERVAL;
+  }
 
   Serial.println("Initialize network");
   WiFi.persistent(false);
@@ -182,18 +190,14 @@ static float calculateTilt(float ax, float az, float ay ) {
 }
 
 void loop() {
-  if( nsamples >= MAX_SAMPLES ) {
+  if( sent ) {
+    if( millis()-sent > SEND_TIMEOUT ) {
+      actuallySleep();
+    }
+  } else if( nsamples >= MAX_SAMPLES ) {
     sendSensorData();
     sent = millis();
-
-    // in calibration mode, just keep cycling after a delay
-    if( !normal_mode ) {
-      sent += CAL_DELAY;
-      nsamples = 0;
-    }
-  } else if( normal_mode && sent && millis()-sent > SEND_TIMEOUT ) {
-    actuallySleep();
-  } else if( millis() > sent && nsamples < MAX_SAMPLES && mpu.getIntDataReadyStatus() ) {
+  } else if( nsamples < MAX_SAMPLES && mpu.getIntDataReadyStatus() ) {
     int16_t ax, ay, az;
     mpu.getAcceleration(&ax, &az, &ay);
     samples[nsamples++] = calculateTilt(ax, az, ay);
