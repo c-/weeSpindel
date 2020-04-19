@@ -51,16 +51,26 @@ extern "C" {
 // someone is monitoring that stuff and can swap batteries before it really dies.
 #define LOW_VOLTAGE_THRESHOLD 1.15
 
+// when we booted
+static unsigned long started = 0;
+
 // This eliminates the intense startup spike caused by RF calibration.
 // Without it, fresh booting from an AAA NiMH is unreliable unless it's fresh
 // off the charger. Normal deep sleeps have RFCAL disabled, so that hasn't been
 // a huge problem.
 RF_PRE_INIT() {
+  started = millis();
+
   // Note: we don't need the radio off entirely because we're going to need it
   // pretty soonish.
   system_phy_set_powerup_option(2);  // stop the RFCAL at boot
   wifi_set_opmode_current(NULL_MODE);  // set Wi-Fi to unconfigured, don't save to flash
+
+  // this *shouldn't* be needed, but let's try it.
+  wifi_fpm_set_sleep_type(MODEM_SLEEP_T);
 }
+
+//RF_MODE(RF_NO_CAL)  // maybe equivalent?
 
 //------------------------------------------------------------
 static String nodeid;
@@ -81,7 +91,6 @@ static inline void ledOff() {
 
 //-----------------------------------------------------------------
 static double voltage = HUGE_VAL;
-static unsigned long started = 0;
 
 static void actuallySleep() {
   // If we haven't already done this...
@@ -164,16 +173,14 @@ static void sendSensorData() {
 }
 
 void setup() {
-  started = millis();
+  pinMode(led, OUTPUT);
+  ledOn();
 
   {
     char buf[16];
     nodeid = "weeSpindel-";
     nodeid += itoa(ESP.getChipId(),buf,16);
   }
-
-  pinMode(led, OUTPUT);
-  ledOn();
 
   Serial.begin(115200);
   Serial.println("Reboot");
