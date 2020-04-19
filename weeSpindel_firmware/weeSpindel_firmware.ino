@@ -9,6 +9,7 @@
 
 extern "C" {
   #include <espnow.h>
+  #include <user_interface.h>
 }
 #include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
@@ -17,20 +18,49 @@ extern "C" {
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 
+// this isn't important unless you're trying to make a completely
+// wireless bridge work.
 #define WIFI_CHANNEL 7
+
+// time to wait after a transmit. We don't listen for ACK's
 #define SEND_TIMEOUT 100
+
+// I2C pins
 #define SDA_PIN 4
 #define SCL_PIN 5
-#define CALIBRATE_PIN 14  // pull low to run in calibration mode
+
+// pull low to run in calibration mode
+#define CALIBRATE_PIN 14
+
 #define MAX_SAMPLES 5   // number of tilt samples to average
+
+// Normal interval should be long enough to stretch out battery life. Since
+// we're using the MPU temp sensor, we're probably going to see slower
+// response times so longer intervals aren't a terrible idea.
 #define NORMAL_INTERVAL 900
+
+// In calibration mode, we need more frequent updates.
 #define CALIBRATION_INTERVAL 30
+
+// This prefixes the identifier in the JSON message, which
+// I feed directly to MQTT.
 #define TOPIC_PREFIX "sensors/"
 
 // When the battery cell (default assumes NiMH) gets this low,
 // the ESP switches to every 3*SLEEP_UPDATE_INTERVAL updates. Hopefully
 // someone is monitoring that stuff and can swap batteries before it really dies.
-#define LOW_VOLTAGE_THRESHOLD 1.0
+#define LOW_VOLTAGE_THRESHOLD 1.15
+
+// This eliminates the intense startup spike caused by RF calibration.
+// Without it, fresh booting from an AAA NiMH is unreliable unless it's fresh
+// off the charger. Normal deep sleeps have RFCAL disabled, so that hasn't been
+// a huge problem.
+RF_PRE_INIT() {
+  // Note: we don't need the radio off entirely because we're going to need it
+  // pretty soonish.
+  system_phy_set_powerup_option(2);  // stop the RFCAL at boot
+  wifi_set_opmode_current(NULL_MODE);  // set Wi-Fi to unconfigured, don't save to flash
+}
 
 //------------------------------------------------------------
 static String nodeid;
@@ -54,8 +84,7 @@ static double voltage = HUGE_VAL;
 static unsigned long started = 0;
 
 static void actuallySleep() {
-
-  // turn off the sensor
+  // If we haven't already done this...
   mpu.setSleepEnabled(true);
   
   bool lowv = !(voltage != HUGE_VAL && voltage > LOW_VOLTAGE_THRESHOLD);
@@ -83,6 +112,7 @@ static inline double readVoltage() {
 //--------------------------------------------------------------
 static unsigned nsamples = 0;
 static float samples[MAX_SAMPLES];
+static float temperature = 0.0;
 
 static void sendSensorData() {
   ledOn();
@@ -98,7 +128,7 @@ static void sendSensorData() {
   }
 
   root["tilt"] = sum / nsamples;
-  root["tt"] = mpu.getTemperature() / 340.0 + 36.53;
+  root["tt"] = temperature;
   root["v"] = readVoltage();
   root["interval"] = sleep_interval;
 
@@ -109,8 +139,26 @@ static void sendSensorData() {
   msg += nodeid;
   msg += " ";
   msg += jstr;
-  esp_now_send(NULL, (u8*)msg.c_str(), msg.length()+1);
+
   Serial.println(msg);
+
+  // Bring up the network as late as possible
+  Serial.println("Initialize network");
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  
+  if( esp_now_init() != 0 ) {
+    Serial.println("ESPNOW init failed");
+    actuallySleep();
+  }
+
+  // Configure for broadcast.
+  static uint8_t broadcast_mac[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+  esp_now_add_peer(broadcast_mac, ESP_NOW_ROLE_SLAVE, WIFI_CHANNEL, NULL, 0);
+
+  esp_now_send(NULL, (u8*)msg.c_str(), msg.length()+1);
 
   ledOff();
 }
@@ -144,25 +192,10 @@ void setup() {
   } else {
     Serial.println("Calibration mode");
 
-    // The only difference between "norma" and "calibration"
-    // is the update frequency. We still deep sleep.
+    // The only difference between "normal" and "calibration"
+    // is the update frequency. We still deep sleep between samples.
     sleep_interval = CALIBRATION_INTERVAL;
   }
-
-  Serial.println("Initialize network");
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-  
-  if( esp_now_init() != 0 ) {
-    Serial.println("ESPNOW init failed");
-    actuallySleep();
-  }
-
-  // Configure for broadcast
-  static uint8_t broadcast_mac[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-  esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
-  esp_now_add_peer(broadcast_mac, ESP_NOW_ROLE_SLAVE, WIFI_CHANNEL, NULL, 0);
 
   Serial.println("Starting MPU-6050 Reading");
   Wire.begin(SDA_PIN, SCL_PIN);
@@ -191,6 +224,8 @@ static float calculateTilt(float ax, float az, float ay ) {
 
 void loop() {
   if( sent ) {
+    // Theoretically, if we looked for ACK messages we might
+    // be able to go to sleep earlier.
     if( millis()-sent > SEND_TIMEOUT ) {
       actuallySleep();
     }
@@ -200,7 +235,17 @@ void loop() {
   } else if( nsamples < MAX_SAMPLES && mpu.getIntDataReadyStatus() ) {
     int16_t ax, ay, az;
     mpu.getAcceleration(&ax, &az, &ay);
+
     samples[nsamples++] = calculateTilt(ax, az, ay);
+
+    if( nsamples >= MAX_SAMPLES ) {
+      // As soon as we have our samples, read the temperature
+      temperature = mpu.getTemperature() / 340.0 + 36.53;
+
+      // ... and put the MPU back to sleep. No reason for it to
+      // be sampling while we're doing networky things.
+      mpu.setSleepEnabled(true);
+    }
   }
-  delay(1);
+  delay(5);
 }
