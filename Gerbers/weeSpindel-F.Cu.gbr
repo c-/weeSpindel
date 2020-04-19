@@ -1,12 +1,12 @@
 G04 #@! TF.GenerationSoftware,KiCad,Pcbnew,5.0.2-bee76a0~70~ubuntu18.04.1*
-G04 #@! TF.CreationDate,2020-04-18T19:54:21-04:00*
+G04 #@! TF.CreationDate,2020-04-19T14:24:32-04:00*
 G04 #@! TF.ProjectId,weeSpindel,77656553-7069-46e6-9465-6c2e6b696361,rev?*
 G04 #@! TF.SameCoordinates,PX56c8cc0PY6dac2c0*
 G04 #@! TF.FileFunction,Copper,L1,Top*
 G04 #@! TF.FilePolarity,Positive*
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW 5.0.2-bee76a0~70~ubuntu18.04.1) date Sat 18 Apr 2020 07:54:21 PM EDT*
+G04 Created by KiCad (PCBNEW 5.0.2-bee76a0~70~ubuntu18.04.1) date Sun 19 Apr 2020 02:24:32 PM EDT*
 %MOMM*%
 %LPD*%
 G01*
@@ -155,6 +155,8 @@ G04 #@! TO.N,Net-(C2-Pad1)*
 X41650000Y9000000D03*
 G04 #@! TD*
 D18*
+G04 #@! TO.N,GND*
+X46000000Y17500000D03*
 G04 #@! TO.N,3V3*
 X16497000Y5721000D03*
 X39000000Y8200000D03*

@@ -25,3 +25,7 @@ weeSpindel is running a stripped down firmware which transmits
 reports using ESP-NOW.  A ESP-NOW-to-MQTT (ESP32 with W5500 ethernet)
 gateway makes the sensor results available in Home Assistant. With this
 arrangement, the entire wake-read-send-sleep cycle is approximately 250ms.
+
+Note that we don't bother with something like a MOSFET to cut power to the
+MPU module; between it and the (on my board, at least) Torex XC6204 LDO
+it'll use maybe 5uA during sleep. We do remove the LED though.
