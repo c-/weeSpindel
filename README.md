@@ -23,11 +23,13 @@ sensor is dropped in favour of the MPU-6050.  Programming the ESP is
 handled by either removing it (I mount mine on pin headers) or some sort
 of TBD pogo pin jig.
 
-weeSpindel is running a stripped down firmware which transmits reports
-using ESP-NOW. ESP-NOW allows for low-overhead transmission,
-which reduces the wake-read-send-sleep cycle to approximately 100-120ms.
-A ESP-NOW-to-MQTT (ESP32 with W5500 ethernet) gateway makes the sensor
-results available in Home Assistant, etc.
+weeSpindel is running a stripped down firmware which transmits
+reports using an ESP-NOW broadcast rather than WiFi. ESP-NOW allows
+for low-overhead transmission, which reduces the wake-read-send-sleep
+cycle to approximately 100-120ms (we only bother with five samples from
+the MPU, which honestly might even be excessive).  A ESP-NOW-to-MQTT
+(ESP32 with an W5500 ethernet module) gateway makes the sensor results
+available in Home Assistant, etc. Configurability is... minimal.
 
 Note that we don't bother with something like a MOSFET to cut power to the
 MPU module; between it and the (on my board, at least) Torex XC6204 LDO
