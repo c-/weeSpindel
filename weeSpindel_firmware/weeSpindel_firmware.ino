@@ -22,8 +22,10 @@ extern "C" {
 // wireless bridge work.
 #define WIFI_CHANNEL 7
 
-// time to wait after a transmit. We don't listen for ACK's
-#define SEND_TIMEOUT 100
+// time to wait after a transmit. In practice, we should never
+// actually timeout since we'll sleep as soon as the transmit
+// completes.
+#define SEND_TIMEOUT 50
 
 // I2C pins
 #define SDA_PIN 4
@@ -37,7 +39,7 @@ extern "C" {
 // Normal interval should be long enough to stretch out battery life. Since
 // we're using the MPU temp sensor, we're probably going to see slower
 // response times so longer intervals aren't a terrible idea.
-#define NORMAL_INTERVAL 900
+#define NORMAL_INTERVAL 1800
 
 // In calibration mode, we need more frequent updates.
 #define CALIBRATION_INTERVAL 30
@@ -57,7 +59,7 @@ extern "C" {
 static unsigned long started = 0;
 
 // This eliminates the intense startup spike caused by RF calibration.
-// Without it, fresh booting from an AAA NiMH is unreliable unless it's fresh
+// Without it, booting from an AAA NiMH is unreliable unless it's fresh
 // off the charger. Normal deep sleeps have RFCAL disabled, so that hasn't been
 // a huge problem.
 RF_PRE_INIT() {
@@ -92,8 +94,6 @@ static inline void ledOff() {
 }
 
 //-----------------------------------------------------------------
-static double voltage = HUGE_VAL;
-
 static void actuallySleep() {
   // If we haven't already done this...
   mpu.setSleepEnabled(true);
@@ -113,10 +113,12 @@ static void actuallySleep() {
 }
 
 //-----------------------------------------------------------------
+static double voltage = HUGE_VAL;
+
 static inline double readVoltage() {
-  // 4.03v to 1.0v voltage divider (1M -> 330k)
-  // NOTE: overkill for an NiMH cell, but I use the same circuit
-  // for a single AA right up to 18650 cells.
+  // 4.03v to 1.0v voltage divider (1M -> 330k 1%)
+  // NOTE: overkill for an NiMH cell, but the weeSpindel
+  // has a 10440 Li-ion option too.
   return (voltage = map(analogRead(A0),0,1024,0,4000)/1000.);
 }
 
@@ -127,18 +129,18 @@ static float temperature = 0.0;
 static unsigned long sent = 0;  // time of transmission
 
 static void sendSensorData() {
-  ledOn();
-  
-  Serial.println("Sending data...");
-  StaticJsonBuffer<200> jsonBuffer;
-  JsonObject& root = jsonBuffer.createObject();
-
-  // calculate average
+  // calculate average. Median might
+  // throw away initial "bad" readings.
   double sum = 0;
   for( int i = 0; i < nsamples; i ++ ) {
     sum += samples[i]; 
   }
 
+  Serial.println("Sending data...");
+
+  // NOTE: max message length is 250 bytes.
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& root = jsonBuffer.createObject();
   root["tilt"] = sum / nsamples;
   root["tt"] = temperature;
   root["v"] = voltage;
@@ -177,15 +179,12 @@ static void sendSensorData() {
   {
     Serial.println("send status " + String(Status));
 
-    // this should force us to sleep immediately when the loop()
+    // this should force us to sleep almost immediately when the loop()
     // next rolls around.
-    sent -= SEND_TIMEOUT;
+    sent = 1;
   });
 
-
   esp_now_send(NULL, (u8*)msg.c_str(), msg.length()+1);
-
-  ledOff();
 }
 
 void setup() {
@@ -193,7 +192,7 @@ void setup() {
   ledOn();
 
   {
-    char buf[16];
+    char buf[12];
     nodeid = "weeSpindel-";
     nodeid += itoa(ESP.getChipId(),buf,16);
   }
@@ -227,7 +226,7 @@ void setup() {
     sleep_interval = CALIBRATION_INTERVAL;
   }
 
-  Serial.println("Starting MPU-6050 Reading");
+  Serial.println("Starting MPU-6050");
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(400000);
 
@@ -246,7 +245,7 @@ void setup() {
   mpu.setRate(17);
   mpu.setIntDataReadyEnabled(true);
   
-  Serial.println("Ready");
+  Serial.println("Finished setup");
 }
 
 static float calculateTilt(float ax, float az, float ay ) {
@@ -261,8 +260,8 @@ void loop() {
       actuallySleep();
     }
   } else if( nsamples >= MAX_SAMPLES ) {
-    sendSensorData();
     sent = millis();
+    sendSensorData();
   } else if( nsamples < MAX_SAMPLES && mpu.getIntDataReadyStatus() ) {
     int16_t ax, ay, az;
     mpu.getAcceleration(&ax, &az, &ay);
@@ -270,7 +269,7 @@ void loop() {
     samples[nsamples++] = calculateTilt(ax, az, ay);
 
     if( nsamples >= MAX_SAMPLES ) {
-      // As soon as we have our samples, read the temperature
+      // As soon as we have all our samples, read the temperature
       temperature = mpu.getTemperature() / 340.0 + 36.53;
 
       // ... and put the MPU back to sleep. No reason for it to
@@ -278,5 +277,5 @@ void loop() {
       mpu.setSleepEnabled(true);
     }
   }
-  delay(5);
+  delay(1);
 }
