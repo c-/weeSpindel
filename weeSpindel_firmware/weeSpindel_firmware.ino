@@ -122,6 +122,7 @@ static inline double readVoltage() {
 static unsigned nsamples = 0;
 static float samples[MAX_SAMPLES];
 static float temperature = 0.0;
+static unsigned long sent = 0;  // time of transmission
 
 static void sendSensorData() {
   ledOn();
@@ -167,6 +168,19 @@ static void sendSensorData() {
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_add_peer(broadcast_mac, ESP_NOW_ROLE_SLAVE, WIFI_CHANNEL, NULL, 0);
 
+  // We're doing a broadcast so we won't get an ACK packet, but this will
+  // tell us when it's safe to go to sleep, which shaves a lot of time
+  // off our wake cycle.
+  esp_now_register_send_cb([](uint8_t *mac, uint8_t Status)
+  {
+    Serial.println("send status " + String(Status));
+
+    // this should force us to sleep immediately when the loop()
+    // next rolls around.
+    sent -= SEND_TIMEOUT;
+  });
+
+
   esp_now_send(NULL, (u8*)msg.c_str(), msg.length()+1);
 
   ledOff();
@@ -207,6 +221,11 @@ void setup() {
   Serial.println("Starting MPU-6050 Reading");
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(400000);
+
+  // FIXME: the initial reading after a full power on is usually
+  // off compared to what we get from a deep sleep wake. There's
+  // probably something we should do to compensate, like a delay
+  // if the boot reason is anything other than Deep sleep wake.
   mpu.initialize();
   mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
   mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
@@ -221,8 +240,6 @@ void setup() {
   Serial.println("Ready");
 }
 
-static unsigned long sent = 0;
-
 static float calculateTilt(float ax, float az, float ay ) {
   float pitch = (atan2(ay, sqrt(ax * ax + az * az))) * 180.0 / M_PI;
   float roll = (atan2(ax, sqrt(ay * ay + az * az))) * 180.0 / M_PI;
@@ -231,8 +248,6 @@ static float calculateTilt(float ax, float az, float ay ) {
 
 void loop() {
   if( sent ) {
-    // Theoretically, if we looked for ACK messages we might
-    // be able to go to sleep earlier.
     if( millis()-sent > SEND_TIMEOUT ) {
       actuallySleep();
     }
