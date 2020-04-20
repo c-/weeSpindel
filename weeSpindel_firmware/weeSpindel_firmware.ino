@@ -47,9 +47,11 @@ extern "C" {
 #define TOPIC_PREFIX "sensors/"
 
 // When the battery cell (default assumes NiMH) gets this low,
-// the ESP switches to every 3*SLEEP_UPDATE_INTERVAL updates. Hopefully
+// the ESP switches to every
+// LOW_VOLTAGE_MULTIPLIER*SLEEP_UPDATE_INTERVAL second updates. Hopefully
 // someone is monitoring that stuff and can swap batteries before it really dies.
-#define LOW_VOLTAGE_THRESHOLD 1.15
+#define LOW_VOLTAGE_THRESHOLD 1.2
+#define LOW_VOLTAGE_MULTIPLIER 4
 
 // when we booted
 static unsigned long started = 0;
@@ -96,15 +98,15 @@ static void actuallySleep() {
   // If we haven't already done this...
   mpu.setSleepEnabled(true);
   
-  bool lowv = !(voltage != HUGE_VAL && voltage > LOW_VOLTAGE_THRESHOLD);
-  
   double uptime = (millis() - started)/1000.;
   
-  long willsleep = sleep_interval * (lowv ? 3 : 1) - uptime;
+  long willsleep = sleep_interval - uptime;
   if( willsleep <= sleep_interval/2) {
+    // If we somehow ended up awake longer than half a sleep interval,
+    // sleep longer. This shouldn't happen in practice.
     willsleep = sleep_interval;
   }
-  Serial.printf("Deep sleeping %d seconds after %.2g awake\n", willsleep, uptime);
+  Serial.printf("Deep sleeping %d seconds after %.3g awake\n", willsleep, uptime);
 
   ledOff();
   ESP.deepSleepInstant(willsleep * 1000000, WAKE_NO_RFCAL);
@@ -139,7 +141,7 @@ static void sendSensorData() {
 
   root["tilt"] = sum / nsamples;
   root["tt"] = temperature;
-  root["v"] = readVoltage();
+  root["v"] = voltage;
   root["interval"] = sleep_interval;
 
   String jstr;
@@ -169,7 +171,7 @@ static void sendSensorData() {
   esp_now_add_peer(broadcast_mac, ESP_NOW_ROLE_SLAVE, WIFI_CHANNEL, NULL, 0);
 
   // We're doing a broadcast so we won't get an ACK packet, but this will
-  // tell us when it's safe to go to sleep, which shaves a lot of time
+  // tell us when it's safe to go to sleep, which shaves most of SEND_TIMEOUT
   // off our wake cycle.
   esp_now_register_send_cb([](uint8_t *mac, uint8_t Status)
   {
@@ -210,6 +212,13 @@ void setup() {
   pinMode(CALIBRATE_PIN,INPUT_PULLUP);
   if( digitalRead(CALIBRATE_PIN) ) {
     Serial.println("Normal mode");
+
+    readVoltage();
+    bool lowv = !(voltage != HUGE_VAL && voltage > LOW_VOLTAGE_THRESHOLD);
+    if( lowv ) {
+      Serial.println("Voltage below threshold, sleeping longer");
+      sleep_interval *= LOW_VOLTAGE_MULTIPLIER;
+    }
   } else {
     Serial.println("Calibration mode");
 
@@ -222,7 +231,7 @@ void setup() {
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(400000);
 
-  // FIXME: the initial reading after a full power on is usually
+  // FIXME: the initial reading after a fresh power up is usually
   // off compared to what we get from a deep sleep wake. There's
   // probably something we should do to compensate, like a delay
   // if the boot reason is anything other than Deep sleep wake.
