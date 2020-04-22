@@ -22,10 +22,14 @@ extern "C" {
 // wireless bridge work.
 #define WIFI_CHANNEL 7
 
-// time to wait after a transmit. In practice, we should never
+// Time to linger after a transmit. In practice, we should never
 // actually timeout since we'll sleep as soon as the transmit
 // completes.
 #define SEND_TIMEOUT 50
+
+// Maximum time to be awake, in ms. This is needed in case the MPU sensor
+// fails to return any samples.
+#define WAKE_TIMEOUT  250
 
 // I2C pins
 #define SDA_PIN 4
@@ -34,7 +38,8 @@ extern "C" {
 // pull low to run in calibration mode
 #define CALIBRATE_PIN 14
 
-#define MAX_SAMPLES 5   // number of tilt samples to average
+// number of tilt samples to average
+#define MAX_SAMPLES 5
 
 // Normal interval should be long enough to stretch out battery life. Since
 // we're using the MPU temp sensor, we're probably going to see slower
@@ -128,21 +133,29 @@ static float samples[MAX_SAMPLES];
 static float temperature = 0.0;
 static unsigned long sent = 0;  // time of transmission
 
-static void sendSensorData() {
-  // calculate average. Median might
-  // throw away initial "bad" readings.
-  double sum = 0;
-  for( int i = 0; i < nsamples; i ++ ) {
-    sum += samples[i]; 
-  }
+float round1(float value) {
+   return (int)(value * 10 + 0.5) / 10.0;
+}
 
+static void sendSensorData() {
   Serial.println("Sending data...");
 
   // NOTE: max message length is 250 bytes.
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
-  root["tilt"] = sum / nsamples;
-  root["tt"] = temperature;
+  JsonArray& s = root.createNestedArray("samples");
+
+  // calculate average. Median might
+  // throw away initial "bad" readings.
+  double sum = 0;
+  for( int i = 0; i < nsamples; i ++ ) {
+    sum += samples[i];
+    // throw the samples into the message too 
+    s.add(round1(samples[i]));
+  }
+
+  root["tilt"] = round1(sum / nsamples);
+  root["tt"] = round1(temperature);
   root["v"] = voltage;
   root["interval"] = sleep_interval;
 
@@ -230,10 +243,6 @@ void setup() {
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setClock(400000);
 
-  // FIXME: the initial reading after a fresh power up is usually
-  // off compared to what we get from a deep sleep wake. There's
-  // probably something we should do to compensate, like a delay
-  // if the boot reason is anything other than Deep sleep wake.
   mpu.initialize();
   mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
   mpu.setFullScaleGyroRange(MPU6050_GYRO_FS_250);
@@ -259,14 +268,19 @@ void loop() {
     if( millis()-sent > SEND_TIMEOUT ) {
       actuallySleep();
     }
-  } else if( nsamples >= MAX_SAMPLES ) {
+  } else if( nsamples >= MAX_SAMPLES || (millis()-started) > WAKE_TIMEOUT ) {
     sent = millis();
     sendSensorData();
   } else if( nsamples < MAX_SAMPLES && mpu.getIntDataReadyStatus() ) {
     int16_t ax, ay, az;
     mpu.getAcceleration(&ax, &az, &ay);
 
-    samples[nsamples++] = calculateTilt(ax, az, ay);
+    float tilt = calculateTilt(ax, az, ay);
+    if( tilt > 0.0 ) {
+      // we sometimes get bogus zero initial readings
+      // after a hard boot. Ignore them.
+      samples[nsamples++] = tilt;
+    }
 
     if( nsamples >= MAX_SAMPLES ) {
       // As soon as we have all our samples, read the temperature
@@ -277,5 +291,7 @@ void loop() {
       mpu.setSleepEnabled(true);
     }
   }
-  delay(1);
+
+  // mpu.getIntDataReadyStatus() hits the I2C bus. We don't need to poll every ms.
+  delay(5);
 }
