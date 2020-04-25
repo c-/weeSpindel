@@ -108,12 +108,12 @@ $EndComp
 $Comp
 L Device:C C2
 U 1 1 5CD61C94
-P 2500 2850
-F 0 "C2" H 2588 2896 50  0000 L CNN
-F 1 "10uF" H 2588 2805 50  0000 L CNN
-F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 2500 2850 50  0001 C CNN
-F 3 "~" H 2500 2850 50  0001 C CNN
-	1    2500 2850
+P 2400 2550
+F 0 "C2" H 2488 2596 50  0000 L CNN
+F 1 "10uF" H 2488 2505 50  0000 L CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 2400 2550 50  0001 C CNN
+F 3 "~" H 2400 2550 50  0001 C CNN
+	1    2400 2550
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -224,16 +224,12 @@ F 3 "~" H 4550 2550 50  0001 C CNN
 	1    4550 2550
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	2500 3050 2500 3000
 Text Notes 4200 3450 0    50   ~ 0
 Duplicate 10uF caps\nto reduce ESD, as per\ndatasheet. Larger bulk\ncapacitor for 1x NiMH.
 Wire Wire Line
 	3450 2550 3450 3050
 Wire Wire Line
 	2850 2100 2950 2100
-Wire Wire Line
-	2500 3050 3450 3050
 Wire Wire Line
 	4550 2400 4550 2100
 Wire Wire Line
@@ -523,49 +519,41 @@ F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/20001826C.pdf" H 1750 1750 
 	1    1750 1750
 	1    0    0    -1  
 $EndComp
-$Comp
-L Jumper:Jumper_3_Bridged12 JP2
-U 1 1 5E95C87B
-P 2150 1250
-F 0 "JP2" H 2150 1362 50  0000 C CNN
-F 1 "REGULATOR" H 2150 1453 50  0000 C CNN
-F 2 "Jumper:SolderJumper-3_P1.3mm_Bridged12_RoundedPad1.0x1.5mm" H 2150 1250 50  0001 C CNN
-F 3 "~" H 2150 1250 50  0001 C CNN
-	1    2150 1250
-	-1   0    0    1   
-$EndComp
-Wire Wire Line
-	1600 900  2150 900 
 Wire Wire Line
 	2400 1250 2400 2100
 Wire Wire Line
 	2400 2100 2550 2100
 Wire Wire Line
-	2150 1100 2150 900 
-Connection ~ 2150 900 
-Wire Wire Line
-	2150 900  2500 900 
-Wire Wire Line
 	2050 1750 2900 1750
 Connection ~ 2900 1750
-Wire Wire Line
-	1900 1250 1200 1250
 Wire Wire Line
 	1200 1250 1200 1750
 Wire Wire Line
 	1200 1750 1450 1750
 Wire Wire Line
 	1750 2050 1750 3050
-Wire Wire Line
-	1750 3050 2500 3050
-Connection ~ 2500 3050
-Wire Wire Line
-	2500 2700 2500 900 
-Connection ~ 2500 900 
-Wire Wire Line
-	2500 900  3400 900 
 Text Notes 900  2100 0    50   ~ 0
 FIXME: add Li-ion protection
 NoConn ~ 4600 5650
 NoConn ~ 4600 5750
+Wire Wire Line
+	1750 3050 2400 3050
+Wire Wire Line
+	2400 2400 2400 2100
+Connection ~ 2400 2100
+Wire Wire Line
+	2400 2700 2400 3050
+Connection ~ 2400 3050
+Wire Wire Line
+	2400 3050 3450 3050
+Wire Wire Line
+	1200 1250 2400 1250
+Wire Wire Line
+	1600 900  2400 900 
+Wire Wire Line
+	2400 900  2400 1250
+Connection ~ 2400 900 
+Wire Wire Line
+	2400 900  3400 900 
+Connection ~ 2400 1250
 $EndSCHEMATC
