@@ -99,9 +99,18 @@ static inline void ledOff() {
 }
 
 //-----------------------------------------------------------------
+static void putMpuToSleep() {
+  static int slept = 0;
+  if( slept==0 ) {
+    mpu.setSleepEnabled(true);
+  }
+  slept = 1;
+  
+}
+
 static void actuallySleep() {
   // If we haven't already done this...
-  mpu.setSleepEnabled(true);
+  putMpuToSleep();
   
   double uptime = (millis() - started)/1000.;
   
@@ -188,6 +197,7 @@ static void sendSensorData() {
   // We're doing a broadcast so we won't get an ACK packet, but this will
   // tell us when it's safe to go to sleep, which shaves most of SEND_TIMEOUT
   // off our wake cycle.
+  sent = millis();
   esp_now_register_send_cb([](uint8_t *mac, uint8_t Status)
   {
     Serial.println("send status " + String(Status));
@@ -265,11 +275,9 @@ static float calculateTilt(float ax, float az, float ay ) {
 
 void loop() {
   if( sent ) {
-    if( millis()-sent > SEND_TIMEOUT ) {
-      actuallySleep();
-    }
-  } else if( nsamples >= MAX_SAMPLES || (millis()-started) > WAKE_TIMEOUT ) {
-    sent = millis();
+    if( millis()-sent > SEND_TIMEOUT ) actuallySleep();
+  } else if( (millis()-started) > WAKE_TIMEOUT ) {
+    // send anyways, we need to sleep
     sendSensorData();
   } else if( nsamples < MAX_SAMPLES && mpu.getIntDataReadyStatus() ) {
     int16_t ax, ay, az;
@@ -288,10 +296,16 @@ void loop() {
 
       // ... and put the MPU back to sleep. No reason for it to
       // be sampling while we're doing networky things.
-      mpu.setSleepEnabled(true);
+      putMpuToSleep();
+
+      // no need to wait for the delay
+      sendSensorData();
     }
   }
 
-  // mpu.getIntDataReadyStatus() hits the I2C bus. We don't need to poll every ms.
-  delay(5);
+  // mpu.getIntDataReadyStatus() hits the I2C bus. We don't need
+  // to poll every ms while we're gathering samples. Once we have
+  // the samples we're just waiting for the transmit to clear, so
+  // loop a bit quicker.
+  delay((nsamples < MAX_SAMPLES) ? 5 : 1);
 }
