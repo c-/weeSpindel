@@ -2,7 +2,7 @@
 
   (general
     (thickness 1.6)
-    (drawings 16)
+    (drawings 17)
     (tracks 136)
     (zones 0)
     (modules 22)
@@ -1013,6 +1013,7 @@
       (net 14 "Net-(C2-Pad1)"))
   )
 
+  (gr_poly (pts (xy 144 96.25) (xy 182.5 96.25) (xy 182.5 99) (xy 144 99)) (layer F.SilkS) (width 0.15))
   (gr_text - (at 187.5 97.6) (layer Dwgs.User) (tstamp 5EC0D420)
     (effects (font (size 1.75 1.75) (thickness 0.3)))
   )
