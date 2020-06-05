@@ -140,7 +140,7 @@ static inline double readVoltage() {
 static unsigned nsamples = 0;
 static float samples[MAX_SAMPLES];
 static float temperature = 0.0;
-static unsigned long sent = 0;  // time of transmission
+static long sent = 0;  // time of transmission
 
 float round1(float value) {
    return (int)(value * 10 + 0.5) / 10.0;
@@ -179,9 +179,17 @@ static void sendSensorData() {
   Serial.println(msg);
 
   // Bring up the network as late as possible
+  // NOTE: if we don't do this, the default channel will always
+  // be "1", which is great if everything is default, but if
+  // you want to run a ESPNOW-to-WiFi bridge then the
+  // ESPNOW and WiFi channels *must* always be identical.
+  // And yes, it does seem to ignore the channel setting in
+  // esp_now_add_peer(). Sorta.
   Serial.println("Initialize network");
+  WiFi.forceSleepWake();
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
+  WiFi.begin(nodeid,nodeid,WIFI_CHANNEL,NULL,false);
   WiFi.disconnect();
   
   if( esp_now_init() != 0 ) {
@@ -204,7 +212,7 @@ static void sendSensorData() {
 
     // this should force us to sleep almost immediately when the loop()
     // next rolls around.
-    sent = 1;
+    sent = -3*SEND_TIMEOUT;
   });
 
   esp_now_send(NULL, (u8*)msg.c_str(), msg.length()+1);
