@@ -70,14 +70,14 @@ F 3 "http://wiki.ai-thinker.com/_media/esp8266/docs/aithinker_esp_12f_datasheet_
 	1    3700 5950
 	1    0    0    -1  
 $EndComp
-Text Notes 850  5450 0    50   ~ 0
+Text Notes 750  5450 0    50   ~ 0
 RST: newer ESP-12F has\ninternal 12k pullup. 47K\nshould allow versions\nwith and without to boot.
 $Comp
 L Device:R R5
 U 1 1 5CA494A3
 P 2100 5300
 F 0 "R5" V 2200 5300 50  0000 C CNN
-F 1 "47K" V 2250 5300 50  0000 C CNN
+F 1 "47K" V 2300 5300 50  0000 C CNN
 F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder" V 2030 5300 50  0001 C CNN
 F 3 "~" H 2100 5300 50  0001 C CNN
 	1    2100 5300
@@ -307,7 +307,7 @@ L Device:R R7
 U 1 1 5E9A2F33
 P 4700 6650
 F 0 "R7" V 4800 6650 50  0000 C CNN
-F 1 "10K" V 4850 6650 50  0000 C CNN
+F 1 "10K" V 4900 6650 50  0000 C CNN
 F 2 "Resistor_SMD:R_0805_2012Metric_Pad1.15x1.40mm_HandSolder" V 4630 6650 50  0001 C CNN
 F 3 "~" H 4700 6650 50  0001 C CNN
 	1    4700 6650
@@ -413,7 +413,7 @@ L Regulator_Linear:MCP1700-3302E_SOT23 U3
 U 1 1 5E95A681
 P 4200 2500
 F 0 "U3" H 4200 2742 50  0000 C CNN
-F 1 "HT7333" H 4200 2651 50  0000 C CNN
+F 1 "HT7233" H 4200 2651 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-23_Handsoldering" H 4200 2725 50  0001 C CNN
 F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/20001826C.pdf" H 4200 2500 50  0001 C CNN
 	1    4200 2500
