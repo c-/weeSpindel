@@ -5,6 +5,8 @@ but I wanted something smaller; ideally, something which I could use in
 my glass carboys. This contraint means I need to get it into a tube with
 an outside diameter of approximately 25mm.
 
+![Front](https://github.com/c-/weeSpindel/blob/master/Pictures/weeSpindel1.1_front.jpg)
+
 I've also been trying to get away from Li-ion as a power source and
 stick to simple NiMH rechargeables. Using 
 [ESP-NOW](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/network/esp_now.html)
@@ -14,7 +16,7 @@ option. However, it turns out that a 25mm tube containing a AA NiMH cell
 doesn't have the necessary buoyancy to actually float, much less tilt,
 so I've been forced to switch to an AAA cell. In a nod to practicality,
 I've also included the option to use a 10440 (AAA-size) Li-ion cell with
-a conventional LDO regulator.
+a conventional LDO regulator, which seems far more stable at this point.
 
 Stripping out all the bits of the iSpindel that I can't use or don't need,
 I'm left with an ESP-12 module, the MPU-6050 module, the power circuitry,
