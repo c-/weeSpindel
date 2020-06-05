@@ -36,8 +36,7 @@ available in Home Assistant, etc. Configurability is... minimal.
 Note that we don't bother with something like a MOSFET to cut power to the
 MPU module; between it and the (on my board, at least) Torex XC6204 LDO
 it'll use maybe 5uA during sleep. We do remove the LED in the usual
-fashion, as well as the 2.2k I2C pullups (we can get away with the internal
-pullups on the ESP).
+fashion.
 
 # Future
 
