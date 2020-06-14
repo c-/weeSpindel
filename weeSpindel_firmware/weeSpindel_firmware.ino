@@ -243,7 +243,6 @@ void setup() {
   if( digitalRead(CALIBRATE_PIN) ) {
     Serial.println("Normal mode");
 
-    readVoltage();
     bool lowv = !(voltage != HUGE_VAL && voltage > LOW_VOLTAGE_THRESHOLD);
     if( lowv ) {
       Serial.println("Voltage below threshold, sleeping longer");
@@ -271,7 +270,9 @@ void setup() {
   mpu.setInterruptDrive(1); // Open drain
   mpu.setRate(17);
   mpu.setIntDataReadyEnabled(true);
-  
+
+  readVoltage();
+
   Serial.println("Finished setup");
 }
 
